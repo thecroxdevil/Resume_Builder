@@ -391,8 +391,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                     type="binary"
                 )
                 cover_letter_upload_status = gr.Markdown("No template uploaded yet")
-                cover_letter_template_text = gr.Code(
-                    language="latex",
+                cover_letter_template_text = gr.Textbox(
                     label="Cover Letter Template",
                     value=load_template("cover_letter"),
                     lines=10

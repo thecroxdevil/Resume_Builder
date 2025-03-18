@@ -1,8 +1,7 @@
 # Resume_Builder
-Temp
 ---
 title: Resume Builder
-emoji: 🐠
+emoji: 🚀
 colorFrom: pink
 colorTo: pink
 sdk: gradio

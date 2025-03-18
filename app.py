@@ -7,10 +7,27 @@ import tempfile
 import time
 from pathlib import Path
 from datetime import datetime
-import base64
 
-# Theme and styling
+# Theme and styling with new color scheme
 custom_css = """
+body {
+    background-color: #FFFFEE !important;
+}
+.gradio-container {
+    background-color: #FFFFEE !important;
+}
+.gr-sidebar-item {
+    background-color: #F8F8E2 !important;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+.gr-form {
+    background-color: #F8F8E2 !important;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+}
 .container {
     max-width: 1200px;
     margin: auto;
@@ -18,13 +35,6 @@ custom_css = """
 .header {
     text-align: center;
     margin-bottom: 20px;
-}
-.result-container {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    padding: 15px;
-    background-color: #f9f9f9;
-    margin-top: 10px;
 }
 .status-success {
     color: #28a745;
@@ -40,11 +50,11 @@ custom_css = """
     font-size: 0.8em;
     color: #6c757d;
 }
-.template-box {
-    border: 1px solid #ddd;
+.settings-item {
+    background-color: #F8F8E2 !important;
     border-radius: 8px;
     padding: 10px;
-    background-color: #f5f5f5;
+    margin-bottom: 10px;
 }
 """
 
@@ -198,26 +208,35 @@ resume_prompt, cover_letter_prompt = load_prompts()
 gemini_available, gemini_status = initialize_gemini_api()
 deepseek_available, deepseek_client, deepseek_status = initialize_deepseek_api()
 
+# Auto-save functions
+def auto_save_resume_template(content):
+    save_template("resume", content)
+    return "Resume template auto-saved"
+
+def auto_save_cover_letter_template(content):
+    save_template("cover_letter", content)
+    return "Cover letter template auto-saved"
+
+def auto_save_prompts(resume_prompt_content, cover_letter_prompt_content):
+    save_prompts(resume_prompt_content, cover_letter_prompt_content)
+    return "Prompts auto-saved"
+
 # Callback functions
 def upload_resume_template(file):
     if file is None:
-        return "No file uploaded", load_template("resume"), gr.update(visible=False)
+        return gr.update(value=load_template("resume")), "No file uploaded"
     
     content = file.decode("utf-8")
     save_template("resume", content)
-    return "Resume template uploaded and saved", content, gr.update(visible=True)
+    return gr.update(value=content), "Resume template uploaded and saved"
 
 def upload_cover_letter_template(file):
     if file is None:
-        return "No file uploaded", load_template("cover_letter"), gr.update(visible=False)
+        return gr.update(value=load_template("cover_letter")), "No file uploaded"
     
     content = file.decode("utf-8")
     save_template("cover_letter", content)
-    return "Cover letter template uploaded and saved", content, gr.update(visible=True)
-
-def save_prompt_settings(resume_prompt_input, cover_letter_prompt_input):
-    save_prompts(resume_prompt_input, cover_letter_prompt_input)
-    return "Prompts saved successfully"
+    return gr.update(value=content), "Cover letter template uploaded and saved"
 
 def update_api_status():
     gemini_available, gemini_status = initialize_gemini_api()
@@ -245,16 +264,16 @@ def save_openrouter_key(api_key):
 
 def generate_documents(job_description, model_choice, resume_template_text, cover_letter_template_text, resume_prompt_input, cover_letter_prompt_input):
     if not job_description:
-        return "Please enter a job description", "", "", "", gr.update(visible=False), gr.update(visible=False)
+        return "Please enter a job description", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
     
     if not resume_template_text:
-        return "Resume template is missing", "", "", "", gr.update(visible=False), gr.update(visible=False)
+        return "Resume template is missing", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
     
     if not cover_letter_template_text:
-        return "Cover letter template is missing", "", "", "", gr.update(visible=False), gr.update(visible=False)
+        return "Cover letter template is missing", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
     
     # Initialize status
-    status_text = f"Generating documents using {model_choice}...\n"
+    status_text = f"Generating documents using {model_choice}..."
     generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     # Customize resume
@@ -263,12 +282,10 @@ def generate_documents(job_description, model_choice, resume_template_text, cove
     elif model_choice == "DeepSeek" and deepseek_available:
         success, customized_resume, message = customize_resume_deepseek(deepseek_client, resume_template_text, job_description, resume_prompt_input)
     else:
-        return f"{model_choice} API is not available", "", "", "", gr.update(visible=False), gr.update(visible=False)
+        return f"{model_choice} API is not available", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
     
     if not success:
-        return f"Error: {message}", "", "", "", gr.update(visible=False), gr.update(visible=False)
-    
-    status_text += f"✓ Resume customized successfully\n"
+        return f"Error: {message}", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
     
     # Generate cover letter
     if model_choice == "Gemini" and gemini_available:
@@ -276,13 +293,12 @@ def generate_documents(job_description, model_choice, resume_template_text, cove
     elif model_choice == "DeepSeek" and deepseek_available:
         success, cover_letter, message = generate_cover_letter_deepseek(deepseek_client, customized_resume, job_description, cover_letter_prompt_input, cover_letter_template_text)
     else:
-        return f"{model_choice} API is not available", customized_resume, "", generation_time, gr.update(visible=True), gr.update(visible=False)
+        return f"{model_choice} API is not available", gr.update(visible=True), gr.update(visible=False), customized_resume, gr.update()
     
     if not success:
-        return f"Resume customized, but error generating cover letter: {message}", customized_resume, "", generation_time, gr.update(visible=True), gr.update(visible=False)
+        return f"Resume customized, but error generating cover letter: {message}", gr.update(visible=True), gr.update(visible=False), customized_resume, gr.update()
     
-    status_text += f"✓ Cover letter generated successfully\n"
-    status_text += f"Documents ready for download"
+    status_text = f"✓ Resume and Cover Letter generated successfully with {model_choice} at {generation_time}"
     
     # Save files temporarily for download
     resume_file = f"customized_resume_{int(time.time())}.tex"
@@ -293,56 +309,63 @@ def generate_documents(job_description, model_choice, resume_template_text, cove
     with open(cover_letter_file, "w") as f:
         f.write(cover_letter)
     
-    return status_text, customized_resume, cover_letter, generation_time, gr.update(visible=True), gr.update(visible=True)
+    return status_text, gr.update(visible=True), gr.update(visible=True), customized_resume, cover_letter
 
-def regenerate_resume(job_description, model_choice, resume_template_text, resume_prompt_input, current_cover_letter, generation_time, dl_resume_visible, dl_cl_visible):
+def regenerate_resume(job_description, model_choice, resume_template_text, resume_prompt_input, cover_letter_output):
+    if not job_description:
+        return "Please enter a job description", gr.update(), gr.update()
+    
     if model_choice == "Gemini" and gemini_available:
         success, customized_resume, message = customize_resume_gemini(resume_template_text, job_description, resume_prompt_input)
     elif model_choice == "DeepSeek" and deepseek_available:
         success, customized_resume, message = customize_resume_deepseek(deepseek_client, resume_template_text, job_description, resume_prompt_input)
     else:
-        return f"{model_choice} API is not available", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        return f"{model_choice} API is not available", gr.update(), gr.update()
     
     if not success:
-        return f"Error: {message}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        return f"Error: {message}", gr.update(), gr.update()
     
     # Save file temporarily for download
     resume_file = f"customized_resume_{int(time.time())}.tex"
     with open(resume_file, "w") as f:
         f.write(customized_resume)
     
-    return f"Resume regenerated successfully using {model_choice}", customized_resume, current_cover_letter, generation_time, dl_resume_visible, dl_cl_visible
+    return f"Resume regenerated successfully using {model_choice}", customized_resume, cover_letter_output
 
-def regenerate_cover_letter(job_description, model_choice, current_resume, resume_template_text, cover_letter_template_text, cover_letter_prompt_input, generation_time, dl_resume_visible, dl_cl_visible):
+def regenerate_cover_letter(job_description, model_choice, current_resume, cover_letter_template_text, cover_letter_prompt_input):
+    if not job_description or not current_resume:
+        return "Please generate a resume first", gr.update(), gr.update()
+    
     if model_choice == "Gemini" and gemini_available:
         success, cover_letter, message = generate_cover_letter_gemini(current_resume, job_description, cover_letter_prompt_input, cover_letter_template_text)
     elif model_choice == "DeepSeek" and deepseek_available:
         success, cover_letter, message = generate_cover_letter_deepseek(deepseek_client, current_resume, job_description, cover_letter_prompt_input, cover_letter_template_text)
     else:
-        return f"{model_choice} API is not available", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        return f"{model_choice} API is not available", gr.update(), gr.update()
     
     if not success:
-        return f"Error: {message}", gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        return f"Error: {message}", gr.update(), gr.update()
     
     # Save file temporarily for download
     cover_letter_file = f"cover_letter_{int(time.time())}.tex"
     with open(cover_letter_file, "w") as f:
         f.write(cover_letter)
     
-    return f"Cover letter regenerated successfully using {model_choice}", current_resume, cover_letter, generation_time, dl_resume_visible, dl_cl_visible
+    return f"Cover letter regenerated successfully using {model_choice}", current_resume, cover_letter
 
-# Create Gradio interface
-with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
+# Create Gradio interface with the new UI layout
+with gr.Blocks(css=custom_css, theme=gr.themes.Base()) as app:
     # Page header
-    with gr.Row(elem_classes=["header"]):
-        gr.Markdown("# AI Resume & Cover Letter Customizer")
-        gr.Markdown("Transform your resume and generate customized cover letters using AI")
-    
-    # Main layout
     with gr.Row():
-        # Left sidebar for templates and settings
+        gr.Markdown("# AI Resume & Cover Letter Customizer", elem_classes=["header"])
+    
+    # Main layout with sidebar and content area
+    with gr.Row():
+        # Left sidebar for settings
         with gr.Column(scale=1):
-            with gr.Accordion("AI Model Selection", open=True):
+            gr.Markdown("## Settings")
+            
+            with gr.Accordion("AI Model", open=True, elem_classes=["settings-item"]):
                 api_status = gr.Markdown(update_api_status())
                 model_choice = gr.Radio(
                     label="Select AI Model",
@@ -351,9 +374,9 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                     interactive=True
                 )
                 
-                with gr.Accordion("OpenRouter API Settings (for DeepSeek)", open=not deepseek_available):
+                with gr.Group(visible=not deepseek_available, elem_classes=["settings-item"]):
                     openrouter_key = gr.Textbox(
-                        label="OpenRouter API Key",
+                        label="OpenRouter API Key (for DeepSeek)",
                         placeholder="Enter your OpenRouter API key here",
                         type="password"
                     )
@@ -365,45 +388,45 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                         outputs=[api_key_status, api_status]
                     )
             
-            with gr.Accordion("Resume Template", open=True):
+            with gr.Accordion("Resume Template", open=True, elem_classes=["settings-item"]):
                 resume_template_file = gr.File(
                     label="Upload Resume LaTeX Template",
                     file_types=[".tex"],
                     type="binary"
                 )
-                resume_upload_status = gr.Markdown("No template uploaded yet")
+                resume_upload_status = gr.Markdown("")
                 resume_template_text = gr.Textbox(
-                    label="Resume Template",
+                    label="Edit Resume Template",
                     value=load_template("resume"),
                     lines=10
                 )
-                resume_template_save = gr.Button("Save Edited Template")
-                resume_template_save.click(
-                    lambda x: (save_template("resume", x), "Template saved"),
+                # Set up auto-save for resume template
+                resume_template_text.change(
+                    auto_save_resume_template,
                     inputs=[resume_template_text],
                     outputs=[resume_upload_status]
                 )
             
-            with gr.Accordion("Cover Letter Template", open=True):
+            with gr.Accordion("Cover Letter Template", open=True, elem_classes=["settings-item"]):
                 cover_letter_template_file = gr.File(
                     label="Upload Cover Letter LaTeX Template",
                     file_types=[".tex"],
                     type="binary"
                 )
-                cover_letter_upload_status = gr.Markdown("No template uploaded yet")
+                cover_letter_upload_status = gr.Markdown("")
                 cover_letter_template_text = gr.Textbox(
-                    label="Cover Letter Template",
+                    label="Edit Cover Letter Template",
                     value=load_template("cover_letter"),
                     lines=10
                 )
-                cover_letter_template_save = gr.Button("Save Edited Template")
-                cover_letter_template_save.click(
-                    lambda x: (save_template("cover_letter", x), "Template saved"),
+                # Set up auto-save for cover letter template
+                cover_letter_template_text.change(
+                    auto_save_cover_letter_template,
                     inputs=[cover_letter_template_text],
                     outputs=[cover_letter_upload_status]
                 )
             
-            with gr.Accordion("AI Prompt Settings", open=False):
+            with gr.Accordion("AI Prompts", open=False, elem_classes=["settings-item"]):
                 resume_prompt_input = gr.Textbox(
                     label="Resume Customization Prompt",
                     value=resume_prompt,
@@ -414,64 +437,70 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                     value=cover_letter_prompt,
                     lines=6
                 )
-                prompt_save_btn = gr.Button("Save Prompts")
                 prompt_status = gr.Markdown("")
-                prompt_save_btn.click(
-                    save_prompt_settings,
+                # Set up auto-save for prompts
+                resume_prompt_input.change(
+                    auto_save_prompts,
+                    inputs=[resume_prompt_input, cover_letter_prompt_input],
+                    outputs=[prompt_status]
+                )
+                cover_letter_prompt_input.change(
+                    auto_save_prompts,
                     inputs=[resume_prompt_input, cover_letter_prompt_input],
                     outputs=[prompt_status]
                 )
         
-        # Right main area for input and results
+        # Right main content area
         with gr.Column(scale=2):
-            with gr.Column():
-                gr.Markdown("## Job Description Input")
-                job_description = gr.Textbox(
-                    label="Paste the job description here",
-                    placeholder="Enter the full job description...",
-                    lines=10
-                )
-                generate_btn = gr.Button("Generate Customized Documents", variant="primary")
+            # Results section at the top
+            generation_status = gr.Markdown("Enter a job description below and click Generate")
             
-            # Results section
-            with gr.Column():
-                generation_status = gr.Markdown("Enter a job description and click Generate to start")
-                generation_time = gr.Markdown(visible=False)
+            with gr.Tabs() as result_tabs:
+                with gr.TabItem("Customized Resume"):
+                    customized_resume_output = gr.Textbox(
+                        label="Customized Resume (LaTeX)",
+                        lines=18,
+                        interactive=True
+                    )
+                    with gr.Row():
+                        regenerate_resume_btn = gr.Button("Regenerate Resume")
+                        download_resume_btn = gr.Button("Download Resume", visible=False)
                 
-                with gr.Tabs():
-                    with gr.TabItem("Customized Resume"):
-                        customized_resume_output = gr.Textbox(
-                            label="Customized Resume (LaTeX)",
-                            lines=20
-                        )
-                        with gr.Row():
-                            regenerate_resume_btn = gr.Button("Regenerate Resume")
-                            download_resume_btn = gr.Button("Download Resume LaTeX", visible=False)
-                    
-                    with gr.TabItem("Cover Letter"):
-                        cover_letter_output = gr.Textbox(
-                            label="Cover Letter (LaTeX)",
-                            lines=20
-                        )
-                        with gr.Row():
-                            regenerate_cl_btn = gr.Button("Regenerate Cover Letter")
-                            download_cl_btn = gr.Button("Download Cover Letter LaTeX", visible=False)
+                with gr.TabItem("Cover Letter"):
+                    cover_letter_output = gr.Textbox(
+                        label="Cover Letter (LaTeX)",
+                        lines=18,
+                        interactive=True
+                    )
+                    with gr.Row():
+                        regenerate_cl_btn = gr.Button("Regenerate Cover Letter")
+                        download_cl_btn = gr.Button("Download Cover Letter", visible=False)
+            
+            # Input section at the bottom
+            with gr.Group():
+                gr.Markdown("## Job Description")
+                job_description = gr.Textbox(
+                    placeholder="Paste the job description here...",
+                    lines=10,
+                    label="Job Description Input"
+                )
+                generate_btn = gr.Button("Generate Customized Documents", variant="primary", size="lg")
     
     # Footer
-    with gr.Row(elem_classes=["footer"]):
-        gr.Markdown("AI Resume & Cover Letter Customizer • Created with Gradio • Version 2.0")
+    with gr.Row():
+        gr.Markdown("AI Resume & Cover Letter Customizer • Created with Gradio • Version 2.0", elem_classes=["footer"])
     
     # Setup event handlers
     resume_template_file.upload(
         upload_resume_template,
         inputs=[resume_template_file],
-        outputs=[resume_upload_status, resume_template_text, resume_template_save]
+        outputs=[resume_template_text, resume_upload_status]
     )
     
     cover_letter_template_file.upload(
         upload_cover_letter_template,
         inputs=[cover_letter_template_file],
-        outputs=[cover_letter_upload_status, cover_letter_template_text, cover_letter_template_save]
+        outputs=[cover_letter_template_text, cover_letter_upload_status]
     )
     
     generate_btn.click(
@@ -486,11 +515,10 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
         ],
         outputs=[
             generation_status,
-            customized_resume_output,
-            cover_letter_output,
-            generation_time,
             download_resume_btn,
-            download_cl_btn
+            download_cl_btn,
+            customized_resume_output,
+            cover_letter_output
         ]
     )
     
@@ -501,18 +529,12 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
             model_choice,
             resume_template_text,
             resume_prompt_input,
-            cover_letter_output,
-            generation_time,
-            download_resume_btn,
-            download_cl_btn
+            cover_letter_output
         ],
         outputs=[
             generation_status,
             customized_resume_output,
-            cover_letter_output,
-            generation_time,
-            download_resume_btn,
-            download_cl_btn
+            cover_letter_output
         ]
     )
     
@@ -522,20 +544,13 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
             job_description,
             model_choice,
             customized_resume_output,
-            resume_template_text,
             cover_letter_template_text,
-            cover_letter_prompt_input,
-            generation_time,
-            download_resume_btn,
-            download_cl_btn
+            cover_letter_prompt_input
         ],
         outputs=[
             generation_status,
             customized_resume_output,
-            cover_letter_output,
-            generation_time,
-            download_resume_btn,
-            download_cl_btn
+            cover_letter_output
         ]
     )
     

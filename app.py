@@ -440,9 +440,8 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                 
                 with gr.Tabs():
                     with gr.TabItem("Customized Resume"):
-                        customized_resume_output = gr.Code(
+                        customized_resume_output = gr.Textbox(
                             label="Customized Resume (LaTeX)",
-                            language="latex",
                             lines=20
                         )
                         with gr.Row():
@@ -450,9 +449,8 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                             download_resume_btn = gr.Button("Download Resume LaTeX", visible=False)
                     
                     with gr.TabItem("Cover Letter"):
-                        cover_letter_output = gr.Code(
+                        cover_letter_output = gr.Textbox(
                             label="Cover Letter (LaTeX)",
-                            language="latex",
                             lines=20
                         )
                         with gr.Row():

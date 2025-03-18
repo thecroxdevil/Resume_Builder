@@ -1,13 +1,11 @@
-
 ---
-title: Resume Builder
-emoji: 🚀
-colorFrom: black
-colorTo: brown
+title: Resume_Builder
+emoji: 📄
+colorFrom: blue
+colorTo: indigo
 sdk: gradio
-sdk_version: 5.21.0
+sdk_version: "4.14.0"
 app_file: app.py
 pinned: false
-license: mit
 ---
-# Resume_Builder
+

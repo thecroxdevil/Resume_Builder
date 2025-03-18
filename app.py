@@ -424,7 +424,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
         
         # Right main area for input and results
         with gr.Column(scale=2):
-            with gr.Group():
+            with gr.Column():
                 gr.Markdown("## Job Description Input")
                 job_description = gr.Textbox(
                     label="Paste the job description here",
@@ -434,7 +434,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                 generate_btn = gr.Button("Generate Customized Documents", variant="primary")
             
             # Results section
-            with gr.Group():
+            with gr.Column():
                 generation_status = gr.Markdown("Enter a job description and click Generate to start")
                 generation_time = gr.Markdown(visible=False)
                 

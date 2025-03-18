@@ -13,8 +13,7 @@ body {
 }
 .header-nav {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    justify-content: space-between; /* Changed from align-items: center to be handled by row justify_content */
     padding-bottom: 20px;
     border-bottom: 1px solid #eee;
     margin-bottom: 30px;
@@ -22,6 +21,7 @@ body {
 .nav-links {
     display: flex;
     gap: 20px;
+    align-items: center; /* Added to vertically center nav links */
 }
 .nav-links a {
     text-decoration: none;
@@ -212,10 +212,10 @@ def search_interface(query):
 with gr.Blocks(css=custom_css) as demo:
     gr.HTML("<div class='container'>")
 
-    with gr.Row(elem_classes="header-nav"):
+    with gr.Row(elem_classes="header-nav", justify="space-between"): # Changed to use justify in Row
         with gr.Column():
             gr.HTML("<h1>Search AI</h1>")
-        with gr.Column(align="right"):
+        with gr.Column(): # Removed align="right" from here
             with gr.Row(elem_classes="nav-links"):
                 gr.HTML("<a href='#'>Search</a>")
                 gr.HTML("<a href='#'>Discover</a>")

@@ -1,6 +1,6 @@
 # Resume_Builder
 ---
-title: Resume Builder
+title: Resume_Builder
 emoji: 🚀
 colorFrom: pink
 colorTo: pink

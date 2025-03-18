@@ -372,8 +372,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Soft()) as app:
                     type="binary"
                 )
                 resume_upload_status = gr.Markdown("No template uploaded yet")
-                resume_template_text = gr.Code(
-                    language="latex",
+                resume_template_text = gr.Textbox(
                     label="Resume Template",
                     value=load_template("resume"),
                     lines=10

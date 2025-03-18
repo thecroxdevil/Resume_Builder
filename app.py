@@ -8,53 +8,228 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-# Theme and styling with new color scheme
+# Theme and styling with Perplexity-like interface
 custom_css = """
-body {
-    background-color: #FFFFEE !important;
+:root {
+    --main-bg-color: #ffffff;
+    --sidebar-bg-color: #f9f9fa;
+    --accent-color: #6c5ce7;
+    --text-color: #0f172a;
+    --border-color: #e2e8f0;
+    --hover-color: #f1f5f9;
 }
-.gradio-container {
-    background-color: #FFFFEE !important;
+
+body, .gradio-container {
+    background-color: var(--main-bg-color) !important;
+    color: var(--text-color);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-.gr-sidebar-item {
-    background-color: #F8F8E2 !important;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 10px;
-}
-.gr-form {
-    background-color: #F8F8E2 !important;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 15px;
-}
-.container {
-    max-width: 1200px;
-    margin: auto;
-}
+
 .header {
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.hidden-settings {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 100%;
+    background-color: var(--sidebar-bg-color);
+    overflow-x: hidden;
+    transition: 0.3s;
+    z-index: 100;
+    padding: 0;
+    box-shadow: -2px 0 8px rgba(0,0,0,0.1);
+}
+
+.hidden-settings.open {
+    width: 400px;
+    padding: 24px;
+}
+
+.settings-toggle {
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 4px;
+    color: var(--text-color);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.settings-toggle:hover {
+    background-color: var(--hover-color);
+}
+
+.central-search {
+    max-width: 800px;
+    margin: 80px auto 40px;
     text-align: center;
-    margin-bottom: 20px;
 }
-.status-success {
-    color: #28a745;
-    font-weight: bold;
+
+.central-search h1 {
+    font-size: 28px;
+    margin-bottom: 24px;
+    font-weight: 600;
 }
-.status-error {
-    color: #dc3545;
-    font-weight: bold;
+
+.search-bar {
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 16px 24px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    display: flex;
+    align-items: center;
+    background-color: var(--main-bg-color);
 }
+
+.search-bar:focus-within {
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    border-color: var(--accent-color);
+}
+
+.result-container {
+    max-width: 800px;
+    margin: 30px auto;
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background-color: var(--main-bg-color);
+}
+
+.model-select {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    justify-content: center;
+}
+
+.model-option {
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: var(--main-bg-color);
+}
+
+.model-option.selected {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.answer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.source-citation {
+    display: inline-block;
+    background-color: rgba(108, 92, 231, 0.1);
+    color: var(--accent-color);
+    font-size: 12px;
+    border-radius: 4px;
+    padding: 2px 6px;
+    margin: 0 2px;
+    cursor: pointer;
+}
+
+.source-list {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.source-item {
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background-color: var(--hover-color);
+}
+
+.action-button {
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: var(--main-bg-color);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-right: 8px;
+}
+
+.action-button:hover {
+    background-color: var(--hover-color);
+}
+
+.action-button.primary {
+    background-color: var(--accent-color);
+    color: white;
+    border-color: var(--accent-color);
+}
+
+.related-questions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 16px;
+}
+
+.related-question {
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+    background-color: var(--main-bg-color);
+}
+
+.related-question:hover {
+    background-color: var(--hover-color);
+}
+
+.hidden {
+    display: none;
+}
+
+.settings-section {
+    margin-bottom: 24px;
+}
+
+.settings-section h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    font-weight: 600;
+}
+
+.close-settings {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    cursor: pointer;
+    font-size: 24px;
+}
+
 .footer {
     text-align: center;
-    margin-top: 30px;
-    font-size: 0.8em;
-    color: #6c757d;
-}
-.settings-item {
-    background-color: #F8F8E2 !important;
-    border-radius: 8px;
-    padding: 10px;
-    margin-bottom: 10px;
+    padding: 20px 0;
+    color: #94a3b8;
+    font-size: 14px;
+    border-top: 1px solid var(--border-color);
+    margin-top: 40px;
 }
 """
 
@@ -203,11 +378,6 @@ def generate_cover_letter_deepseek(client, resume, job_description, prompt, temp
     except Exception as e:
         return False, None, f"Error generating cover letter with DeepSeek: {str(e)}"
 
-# Global state and initialization
-resume_prompt, cover_letter_prompt = load_prompts()
-gemini_available, gemini_status = initialize_gemini_api()
-deepseek_available, deepseek_client, deepseek_status = initialize_deepseek_api()
-
 # Auto-save functions
 def auto_save_resume_template(content):
     save_template("resume", content)
@@ -221,7 +391,52 @@ def auto_save_prompts(resume_prompt_content, cover_letter_prompt_content):
     save_prompts(resume_prompt_content, cover_letter_prompt_content)
     return "Prompts auto-saved"
 
-# Callback functions
+# Global state and initialization
+resume_prompt, cover_letter_prompt = load_prompts()
+gemini_available, gemini_status = initialize_gemini_api()
+deepseek_available, deepseek_client, deepseek_status = initialize_deepseek_api()
+
+# JavaScript for UI interactions
+js_code = """
+function toggleSettings() {
+    const settings = document.querySelector('.hidden-settings');
+    settings.classList.toggle('open');
+}
+
+function closeSettings() {
+    const settings = document.querySelector('.hidden-settings');
+    settings.classList.remove('open');
+}
+
+function selectModel(model) {
+    document.querySelectorAll('.model-option').forEach(el => {
+        el.classList.remove('selected');
+    });
+    document.querySelector(`#model-${model}`).classList.add('selected');
+    
+    // Update hidden radio button
+    const radioBtn = document.querySelector(`input[name="model_choice"][value="${model}"]`);
+    if (radioBtn) radioBtn.checked = true;
+}
+
+function toggleResultView(viewType) {
+    if (viewType === 'resume') {
+        document.querySelector('#resume-view').classList.remove('hidden');
+        document.querySelector('#cover-letter-view').classList.add('hidden');
+    } else {
+        document.querySelector('#resume-view').classList.add('hidden');
+        document.querySelector('#cover-letter-view').classList.remove('hidden');
+    }
+}
+"""
+
+# Callback functions for UI interactions
+def toggle_view(view_type):
+    if view_type == "resume":
+        return gr.update(visible=True), gr.update(visible=False)
+    else:
+        return gr.update(visible=False), gr.update(visible=True)
+
 def upload_resume_template(file):
     if file is None:
         return gr.update(value=load_template("resume")), "No file uploaded"
@@ -238,15 +453,6 @@ def upload_cover_letter_template(file):
     save_template("cover_letter", content)
     return gr.update(value=content), "Cover letter template uploaded and saved"
 
-def update_api_status():
-    gemini_available, gemini_status = initialize_gemini_api()
-    deepseek_available, deepseek_client, deepseek_status = initialize_deepseek_api()
-    
-    status_text = f"Gemini API: {'✓ Available' if gemini_available else '✗ Unavailable'}\n"
-    status_text += f"DeepSeek API: {'✓ Available' if deepseek_available else '✗ Unavailable'}"
-    
-    return status_text
-
 def save_openrouter_key(api_key):
     if not api_key:
         return "Please enter an API key", update_api_status()
@@ -262,19 +468,24 @@ def save_openrouter_key(api_key):
     else:
         return f"Error: {message}", update_api_status()
 
+def update_api_status():
+    gemini_available, gemini_status = initialize_gemini_api()
+    deepseek_available, deepseek_client, deepseek_status = initialize_deepseek_api()
+    
+    status_text = f"Gemini API: {'✓ Available' if gemini_available else '✗ Unavailable'}\n"
+    status_text += f"DeepSeek API: {'✓ Available' if deepseek_available else '✗ Unavailable'}"
+    
+    return status_text
+
 def generate_documents(job_description, model_choice, resume_template_text, cover_letter_template_text, resume_prompt_input, cover_letter_prompt_input):
     if not job_description:
-        return "Please enter a job description", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
+        return "Please enter a job description", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update(), gr.update(visible=False)
     
     if not resume_template_text:
-        return "Resume template is missing", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
+        return "Resume template is missing", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update(), gr.update(visible=False)
     
     if not cover_letter_template_text:
-        return "Cover letter template is missing", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
-    
-    # Initialize status
-    status_text = f"Generating documents using {model_choice}..."
-    generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        return "Cover letter template is missing", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update(), gr.update(visible=False)
     
     # Customize resume
     if model_choice == "Gemini" and gemini_available:
@@ -282,10 +493,10 @@ def generate_documents(job_description, model_choice, resume_template_text, cove
     elif model_choice == "DeepSeek" and deepseek_available:
         success, customized_resume, message = customize_resume_deepseek(deepseek_client, resume_template_text, job_description, resume_prompt_input)
     else:
-        return f"{model_choice} API is not available", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
+        return f"{model_choice} API is not available", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update(), gr.update(visible=False)
     
     if not success:
-        return f"Error: {message}", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update()
+        return f"Error: {message}", gr.update(visible=False), gr.update(visible=False), gr.update(), gr.update(), gr.update(visible=False)
     
     # Generate cover letter
     if model_choice == "Gemini" and gemini_available:
@@ -293,14 +504,15 @@ def generate_documents(job_description, model_choice, resume_template_text, cove
     elif model_choice == "DeepSeek" and deepseek_available:
         success, cover_letter, message = generate_cover_letter_deepseek(deepseek_client, customized_resume, job_description, cover_letter_prompt_input, cover_letter_template_text)
     else:
-        return f"{model_choice} API is not available", gr.update(visible=True), gr.update(visible=False), customized_resume, gr.update()
+        return f"{model_choice} API is not available", gr.update(visible=True), gr.update(visible=False), customized_resume, gr.update(), gr.update(visible=True)
     
     if not success:
-        return f"Resume customized, but error generating cover letter: {message}", gr.update(visible=True), gr.update(visible=False), customized_resume, gr.update()
+        return f"Resume customized, but error generating cover letter: {message}", gr.update(visible=True), gr.update(visible=False), customized_resume, gr.update(), gr.update(visible=True)
     
-    status_text = f"✓ Resume and Cover Letter generated successfully with {model_choice} at {generation_time}"
+    generation_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    status_text = f"Documents generated successfully with {model_choice}"
     
-    # Save files temporarily for download
+    # Save files for download
     resume_file = f"customized_resume_{int(time.time())}.tex"
     with open(resume_file, "w") as f:
         f.write(customized_resume)
@@ -309,12 +521,9 @@ def generate_documents(job_description, model_choice, resume_template_text, cove
     with open(cover_letter_file, "w") as f:
         f.write(cover_letter)
     
-    return status_text, gr.update(visible=True), gr.update(visible=True), customized_resume, cover_letter
+    return status_text, gr.update(visible=True), gr.update(visible=True), customized_resume, cover_letter, gr.update(visible=True)
 
 def regenerate_resume(job_description, model_choice, resume_template_text, resume_prompt_input, cover_letter_output):
-    if not job_description:
-        return "Please enter a job description", gr.update(), gr.update()
-    
     if model_choice == "Gemini" and gemini_available:
         success, customized_resume, message = customize_resume_gemini(resume_template_text, job_description, resume_prompt_input)
     elif model_choice == "DeepSeek" and deepseek_available:
@@ -325,7 +534,7 @@ def regenerate_resume(job_description, model_choice, resume_template_text, resum
     if not success:
         return f"Error: {message}", gr.update(), gr.update()
     
-    # Save file temporarily for download
+    # Save file for download
     resume_file = f"customized_resume_{int(time.time())}.tex"
     with open(resume_file, "w") as f:
         f.write(customized_resume)
@@ -333,7 +542,7 @@ def regenerate_resume(job_description, model_choice, resume_template_text, resum
     return f"Resume regenerated successfully using {model_choice}", customized_resume, cover_letter_output
 
 def regenerate_cover_letter(job_description, model_choice, current_resume, cover_letter_template_text, cover_letter_prompt_input):
-    if not job_description or not current_resume:
+    if not current_resume:
         return "Please generate a resume first", gr.update(), gr.update()
     
     if model_choice == "Gemini" and gemini_available:
@@ -346,149 +555,207 @@ def regenerate_cover_letter(job_description, model_choice, current_resume, cover
     if not success:
         return f"Error: {message}", gr.update(), gr.update()
     
-    # Save file temporarily for download
+    # Save file for download
     cover_letter_file = f"cover_letter_{int(time.time())}.tex"
     with open(cover_letter_file, "w") as f:
         f.write(cover_letter)
     
     return f"Cover letter regenerated successfully using {model_choice}", current_resume, cover_letter
 
-# Create Gradio interface with the new UI layout
+# Create Gradio interface with Perplexity-like UI
 with gr.Blocks(css=custom_css, theme=gr.themes.Base()) as app:
-    # Page header
-    with gr.Row():
-        gr.Markdown("# AI Resume & Cover Letter Customizer", elem_classes=["header"])
+    # JS for interactivity
+    gr.HTML(f"<script>{js_code}</script>")
     
-    # Main layout with sidebar and content area
-    with gr.Row():
-        # Left sidebar for settings
-        with gr.Column(scale=1):
-            gr.Markdown("## Settings")
+    # Hidden settings panel (initially closed)
+    with gr.Column(elem_id="settings-panel", elem_classes=["hidden-settings"]):
+        gr.HTML('<span class="close-settings" onclick="closeSettings()">×</span>')
+        gr.Markdown("## Settings")
+        
+        with gr.Group(elem_classes=["settings-section"]):
+            gr.Markdown("### API Status")
+            api_status = gr.Markdown(update_api_status())
             
-            with gr.Accordion("AI Model", open=True, elem_classes=["settings-item"]):
-                api_status = gr.Markdown(update_api_status())
-                model_choice = gr.Radio(
-                    label="Select AI Model",
-                    choices=["Gemini", "DeepSeek"],
-                    value="Gemini" if gemini_available else "DeepSeek" if deepseek_available else None,
-                    interactive=True
+            # OpenRouter API Key input for DeepSeek
+            with gr.Group(visible=not deepseek_available):
+                openrouter_key = gr.Textbox(
+                    label="OpenRouter API Key (for DeepSeek)",
+                    placeholder="Enter your OpenRouter API key here",
+                    type="password"
                 )
-                
-                with gr.Group(visible=not deepseek_available, elem_classes=["settings-item"]):
-                    openrouter_key = gr.Textbox(
-                        label="OpenRouter API Key (for DeepSeek)",
-                        placeholder="Enter your OpenRouter API key here",
-                        type="password"
-                    )
-                    save_key_btn = gr.Button("Save API Key")
-                    api_key_status = gr.Markdown("")
-                    save_key_btn.click(
-                        save_openrouter_key,
-                        inputs=[openrouter_key],
-                        outputs=[api_key_status, api_status]
-                    )
-            
-            with gr.Accordion("Resume Template", open=True, elem_classes=["settings-item"]):
-                resume_template_file = gr.File(
-                    label="Upload Resume LaTeX Template",
-                    file_types=[".tex"],
-                    type="binary"
-                )
-                resume_upload_status = gr.Markdown("")
-                resume_template_text = gr.Textbox(
-                    label="Edit Resume Template",
-                    value=load_template("resume"),
-                    lines=10
-                )
-                # Set up auto-save for resume template
-                resume_template_text.change(
-                    auto_save_resume_template,
-                    inputs=[resume_template_text],
-                    outputs=[resume_upload_status]
-                )
-            
-            with gr.Accordion("Cover Letter Template", open=True, elem_classes=["settings-item"]):
-                cover_letter_template_file = gr.File(
-                    label="Upload Cover Letter LaTeX Template",
-                    file_types=[".tex"],
-                    type="binary"
-                )
-                cover_letter_upload_status = gr.Markdown("")
-                cover_letter_template_text = gr.Textbox(
-                    label="Edit Cover Letter Template",
-                    value=load_template("cover_letter"),
-                    lines=10
-                )
-                # Set up auto-save for cover letter template
-                cover_letter_template_text.change(
-                    auto_save_cover_letter_template,
-                    inputs=[cover_letter_template_text],
-                    outputs=[cover_letter_upload_status]
-                )
-            
-            with gr.Accordion("AI Prompts", open=False, elem_classes=["settings-item"]):
-                resume_prompt_input = gr.Textbox(
-                    label="Resume Customization Prompt",
-                    value=resume_prompt,
-                    lines=6
-                )
-                cover_letter_prompt_input = gr.Textbox(
-                    label="Cover Letter Generation Prompt",
-                    value=cover_letter_prompt,
-                    lines=6
-                )
-                prompt_status = gr.Markdown("")
-                # Set up auto-save for prompts
-                resume_prompt_input.change(
-                    auto_save_prompts,
-                    inputs=[resume_prompt_input, cover_letter_prompt_input],
-                    outputs=[prompt_status]
-                )
-                cover_letter_prompt_input.change(
-                    auto_save_prompts,
-                    inputs=[resume_prompt_input, cover_letter_prompt_input],
-                    outputs=[prompt_status]
+                save_key_btn = gr.Button("Save API Key")
+                api_key_status = gr.Markdown("")
+                save_key_btn.click(
+                    save_openrouter_key,
+                    inputs=[openrouter_key],
+                    outputs=[api_key_status, api_status]
                 )
         
-        # Right main content area
-        with gr.Column(scale=2):
-            # Results section at the top
-            generation_status = gr.Markdown("Enter a job description below and click Generate")
+        with gr.Group(elem_classes=["settings-section"]):
+            gr.Markdown("### Resume Template")
+            resume_template_file = gr.File(
+                label="Upload Resume LaTeX Template",
+                file_types=[".tex"],
+                type="binary"
+            )
+            resume_upload_status = gr.Markdown("")
+            resume_template_text = gr.Textbox(
+                label="Edit Resume Template",
+                value=load_template("resume"),
+                lines=10
+            )
+            # Auto-save for resume template
+            resume_template_text.change(
+                auto_save_resume_template,
+                inputs=[resume_template_text],
+                outputs=[resume_upload_status]
+            )
+        
+        with gr.Group(elem_classes=["settings-section"]):
+            gr.Markdown("### Cover Letter Template")
+            cover_letter_template_file = gr.File(
+                label="Upload Cover Letter LaTeX Template",
+                file_types=[".tex"],
+                type="binary"
+            )
+            cover_letter_upload_status = gr.Markdown("")
+            cover_letter_template_text = gr.Textbox(
+                label="Edit Cover Letter Template",
+                value=load_template("cover_letter"),
+                lines=10
+            )
+            # Auto-save for cover letter template
+            cover_letter_template_text.change(
+                auto_save_cover_letter_template,
+                inputs=[cover_letter_template_text],
+                outputs=[cover_letter_upload_status]
+            )
+        
+        with gr.Group(elem_classes=["settings-section"]):
+            gr.Markdown("### AI Prompts")
+            resume_prompt_input = gr.Textbox(
+                label="Resume Customization Prompt",
+                value=resume_prompt,
+                lines=6
+            )
+            cover_letter_prompt_input = gr.Textbox(
+                label="Cover Letter Generation Prompt",
+                value=cover_letter_prompt,
+                lines=6
+            )
+            prompt_status = gr.Markdown("")
+            # Auto-save for prompts
+            resume_prompt_input.change(
+                auto_save_prompts,
+                inputs=[resume_prompt_input, cover_letter_prompt_input],
+                outputs=[prompt_status]
+            )
+            cover_letter_prompt_input.change(
+                auto_save_prompts,
+                inputs=[resume_prompt_input, cover_letter_prompt_input],
+                outputs=[prompt_status]
+            )
+    
+    # Main header
+    with gr.Row(elem_classes=["header"]):
+        gr.Markdown("# AI Resume & Cover Letter Customizer")
+        gr.HTML('<div class="settings-toggle" onclick="toggleSettings()"><span>⚙️</span><span>Settings</span></div>')
+    
+    # Result area (initially hidden)
+    results_container = gr.Group(visible=False, elem_classes=["result-container"])
+    
+    with results_container:
+        generation_status = gr.Markdown("Documents generated successfully")
+        
+        with gr.Row(elem_classes=["answer-header"]):
+            gr.Markdown("### Generated Documents")
             
-            with gr.Tabs() as result_tabs:
-                with gr.TabItem("Customized Resume"):
-                    customized_resume_output = gr.Textbox(
-                        label="Customized Resume (LaTeX)",
-                        lines=18,
-                        interactive=True
-                    )
-                    with gr.Row():
-                        regenerate_resume_btn = gr.Button("Regenerate Resume")
-                        download_resume_btn = gr.Button("Download Resume", visible=False)
-                
-                with gr.TabItem("Cover Letter"):
-                    cover_letter_output = gr.Textbox(
-                        label="Cover Letter (LaTeX)",
-                        lines=18,
-                        interactive=True
-                    )
-                    with gr.Row():
-                        regenerate_cl_btn = gr.Button("Regenerate Cover Letter")
-                        download_cl_btn = gr.Button("Download Cover Letter", visible=False)
+            with gr.Column():
+                view_resume_btn = gr.Button("View Resume", elem_classes=["action-button"])
+                view_cl_btn = gr.Button("View Cover Letter", elem_classes=["action-button"])
+        
+        # Resume view
+        with gr.Group(elem_id="resume-view"):
+            gr.Markdown("## Customized Resume")
+            customized_resume_output = gr.Textbox(
+                lines=15,
+                label="",
+                elem_classes=["tex-output"]
+            )
             
-            # Input section at the bottom
-            with gr.Group():
-                gr.Markdown("## Job Description")
-                job_description = gr.Textbox(
-                    placeholder="Paste the job description here...",
-                    lines=10,
-                    label="Job Description Input"
-                )
-                generate_btn = gr.Button("Generate Customized Documents", variant="primary", size="lg")
+            with gr.Row():
+                regenerate_resume_btn = gr.Button("Regenerate", elem_classes=["action-button"])
+                download_resume_btn = gr.Button("Download", elem_classes=["action-button", "primary"])
+            
+            with gr.Group(elem_classes=["source-list"]):
+                gr.Markdown("### Sources")
+                gr.Markdown("1. Resume Template", elem_classes=["source-item"])
+                gr.Markdown("2. Job Description Analysis", elem_classes=["source-item"])
+        
+        # Cover letter view (initially hidden)
+        with gr.Group(elem_id="cover-letter-view", visible=False):
+            gr.Markdown("## Cover Letter")
+            cover_letter_output = gr.Textbox(
+                lines=15,
+                label="",
+                elem_classes=["tex-output"]
+            )
+            
+            with gr.Row():
+                regenerate_cl_btn = gr.Button("Regenerate", elem_classes=["action-button"])
+                download_cl_btn = gr.Button("Download", elem_classes=["action-button", "primary"])
+            
+            with gr.Group(elem_classes=["source-list"]):
+                gr.Markdown("### Sources")
+                gr.Markdown("1. Cover Letter Template", elem_classes=["source-item"])
+                gr.Markdown("2. Customized Resume", elem_classes=["source-item"])
+                gr.Markdown("3. Job Description Analysis", elem_classes=["source-item"])
+    
+    # Central search area - Perplexity style
+    with gr.Group(elem_classes=["central-search"]):
+        gr.Markdown("## Customize your resume for any job")
+        
+        # Model selection in the central area
+        with gr.Row(elem_classes=["model-select"]):
+            gr.HTML(f'''
+                <div id="model-Gemini" class="model-option {"selected" if gemini_available else ""}" 
+                     onclick="selectModel('Gemini')" 
+                     {"style='opacity:0.5;cursor:not-allowed'" if not gemini_available else ""}>
+                    Gemini
+                </div>
+                <div id="model-DeepSeek" class="model-option {"selected" if not gemini_available and deepseek_available else ""}" 
+                     onclick="selectModel('DeepSeek')"
+                     {"style='opacity:0.5;cursor:not-allowed'" if not deepseek_available else ""}>
+                    DeepSeek
+                </div>
+            ''')
+            
+            # Hidden radio button for actual model selection
+            model_choice = gr.Radio(
+                choices=["Gemini", "DeepSeek"],
+                value="Gemini" if gemini_available else "DeepSeek" if deepseek_available else None,
+                label="Model",
+                visible=False
+            )
+        
+        with gr.Row(elem_classes=["search-bar"]):
+            job_description = gr.Textbox(
+                placeholder="Paste your job description here...",
+                lines=1,
+                label=""
+            )
+            generate_btn = gr.Button("Generate", elem_classes=["action-button", "primary"])
+        
+        gr.Markdown("Or try one of these examples:", elem_classes=["related-questions"])
+        
+        with gr.Row(elem_classes=["related-questions"]):
+            example1_btn = gr.Button("Data Scientist", elem_classes=["related-question"])
+            example2_btn = gr.Button("Software Engineer", elem_classes=["related-question"])
+            example3_btn = gr.Button("Marketing Manager", elem_classes=["related-question"])
     
     # Footer
-    with gr.Row():
-        gr.Markdown("AI Resume & Cover Letter Customizer • Created with Gradio • Version 2.0", elem_classes=["footer"])
+    with gr.Row(elem_classes=["footer"]):
+        gr.Markdown("AI Resume & Cover Letter Customizer • Created with Gradio • © 2025")
     
     # Setup event handlers
     resume_template_file.upload(
@@ -503,6 +770,18 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Base()) as app:
         outputs=[cover_letter_template_text, cover_letter_upload_status]
     )
     
+    # View toggle buttons
+    view_resume_btn.click(
+        lambda: (gr.update(visible=True), gr.update(visible=False)),
+        outputs=[gr.Group(elem_id="resume-view"), gr.Group(elem_id="cover-letter-view")]
+    )
+    
+    view_cl_btn.click(
+        lambda: (gr.update(visible=False), gr.update(visible=True)),
+        outputs=[gr.Group(elem_id="resume-view"), gr.Group(elem_id="cover-letter-view")]
+    )
+    
+    # Generation button
     generate_btn.click(
         generate_documents,
         inputs=[
@@ -518,10 +797,12 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Base()) as app:
             download_resume_btn,
             download_cl_btn,
             customized_resume_output,
-            cover_letter_output
+            cover_letter_output,
+            results_container
         ]
     )
     
+    # Regenerate buttons
     regenerate_resume_btn.click(
         regenerate_resume,
         inputs=[
@@ -554,6 +835,7 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Base()) as app:
         ]
     )
     
+    # Download buttons
     download_resume_btn.click(
         lambda: f"customized_resume_{int(time.time())}.tex",
         inputs=None,
@@ -564,6 +846,22 @@ with gr.Blocks(css=custom_css, theme=gr.themes.Base()) as app:
         lambda: f"cover_letter_{int(time.time())}.tex",
         inputs=None,
         outputs=gr.File(label="Download")
+    )
+    
+    # Example buttons
+    example1_btn.click(
+        lambda: "Experience with data analysis, statistical modeling, and machine learning required. Proficiency in Python, R, SQL, and data visualization tools. PhD or Master's degree in Statistics, Computer Science, or related field preferred. 5+ years of experience working with large datasets and implementing machine learning models in production environments.",
+        outputs=job_description
+    )
+    
+    example2_btn.click(
+        lambda: "Seeking a full-stack software engineer with 3+ years of experience in JavaScript, React, Node.js, and MongoDB. Knowledge of AWS cloud services required. Bachelor's degree in Computer Science or equivalent experience. Strong problem-solving skills and experience with agile development methodologies.",
+        outputs=job_description
+    )
+    
+    example3_btn.click(
+        lambda: "Looking for a marketing manager with experience in digital marketing, social media strategy, and campaign analytics. Excellent communication skills and ability to manage multiple projects required. Bachelor's degree in Marketing or related field. 4+ years of experience in marketing roles, preferably in a B2B environment.",
+        outputs=job_description
     )
 
 # Launch the app

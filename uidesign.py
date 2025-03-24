@@ -304,4 +304,74 @@ if st.button("Generate Customized Documents") and job_description:
                     )
                 else:  # DeepSeek
                     cover_letter = generate_cover_letter_deepseek(
-                        customized_resu
+                        customized_resume, 
+                        job_description, 
+                        st.session_state.cover_letter_prompt,
+                        cl_template
+                    )
+            
+            if cover_letter:
+                st.session_state.cover_letter = cover_letter
+                st.success("Documents generated successfully!")
+            else:
+                st.error("Failed to generate cover letter.")
+        else:
+            st.error("Failed to customize resume.")
+
+# Display results in tabs
+if 'customized_resume' in st.session_state and 'cover_letter' in st.session_state:
+    tab1, tab2 = st.tabs(["Customized Resume", "Cover Letter"])
+    
+    with tab1:
+        st.subheader("Customized Resume (LaTeX)")
+        st.code(st.session_state.customized_resume, language="latex")
+        
+        if st.button("Regenerate Resume"):
+            with st.spinner("Customizing resume..."):
+                if ai_model == "Google Gemini":
+                    customized_resume = customize_resume(resume_template, job_description, st.session_state.resume_prompt)
+                else:  # DeepSeek
+                    customized_resume = customize_resume_deepseek(resume_template, job_description, st.session_state.resume_prompt)
+            if customized_resume:
+                st.session_state.customized_resume = customized_resume
+                st.rerun()
+        
+        # Download button for resume
+        resume_download = st.download_button(
+            label="Download Resume LaTeX",
+            data=st.session_state.customized_resume,
+            file_name="customized_resume.tex",
+            mime="text/plain"
+        )
+    
+    with tab2:
+        st.subheader("Cover Letter (LaTeX)")
+        st.code(st.session_state.cover_letter, language="latex")
+        
+        if st.button("Regenerate Cover Letter"):
+            with st.spinner("Generating cover letter..."):
+                if ai_model == "Google Gemini":
+                    cover_letter = generate_cover_letter(
+                        st.session_state.customized_resume, 
+                        job_description, 
+                        st.session_state.cover_letter_prompt,
+                        cl_template
+                    )
+                else:  # DeepSeek
+                    cover_letter = generate_cover_letter_deepseek(
+                        st.session_state.customized_resume, 
+                        job_description, 
+                        st.session_state.cover_letter_prompt,
+                        cl_template
+                    )
+            if cover_letter:
+                st.session_state.cover_letter = cover_letter
+                st.rerun()
+        
+        # Download button for cover letter
+        cl_download = st.download_button(
+            label="Download Cover Letter LaTeX",
+            data=st.session_state.cover_letter,
+            file_name="cover_letter.tex",
+            mime="text/plain"
+        )

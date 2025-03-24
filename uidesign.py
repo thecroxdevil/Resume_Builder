@@ -374,21 +374,22 @@ with col2:
                 st.warning("No saved cover letter template found. Please upload one.")
         
         # Prompt management
-        with st.expander("AI Prompts"):
+        st.subheader("AI Prompts")
+        with st.expander("Edit AI Prompts"):
             st.text_area("Resume Customization Prompt", value=st.session_state.resume_prompt, 
                         height=150, key="resume_prompt_input", 
                         on_change=lambda: setattr(st.session_state, "resume_prompt", st.session_state.resume_prompt_input))
-            
+        
             st.text_area("Cover Letter Generation Prompt", value=st.session_state.cover_letter_prompt, 
                         height=150, key="cl_prompt_input", 
                         on_change=lambda: setattr(st.session_state, "cover_letter_prompt", st.session_state.cl_prompt_input))
-            
+        
             if st.button("Save Prompts"):
                 st.session_state.resume_prompt = st.session_state.resume_prompt_input
                 st.session_state.cover_letter_prompt = st.session_state.cl_prompt_input
                 save_prompts()
                 st.success("Prompts saved!")
-        
+
         # API status indicators
         st.subheader("API Status")
         

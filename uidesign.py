@@ -375,7 +375,7 @@ with col2:
         
         # Prompt management
         st.subheader("AI Prompts")
-        with st.expander("Edit AI Prompts"):
+        with st.subheader("Edit AI Prompts"):
             st.text_area("Resume Customization Prompt", value=st.session_state.resume_prompt, 
                         height=150, key="resume_prompt_input", 
                         on_change=lambda: setattr(st.session_state, "resume_prompt", st.session_state.resume_prompt_input))

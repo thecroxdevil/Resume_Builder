@@ -74,7 +74,7 @@ def initialize_gemini_api():
     except Exception as e:
         st.error(f"Error initializing Gemini API: {e}")
 
-# Initialize OpenRouter Client
+# Initialize OpenRouter Client for DeepSeek
 @st.cache_resource
 def initialize_openrouter_client():
     try:
@@ -229,7 +229,8 @@ with st.sidebar:
         st.session_state.cover_letter_prompt = st.session_state.cl_prompt_input
         save_prompts()
         st.success("Prompts saved!")
-
+        
+    # AI Model Selection
     st.subheader("AI Model Selection")
     ai_model = st.selectbox(
         "Select AI Model:",
@@ -238,7 +239,11 @@ with st.sidebar:
     
     # API key input (for local development)
     st.subheader("API Settings")
-    openrouter_api_key = st.text_input("OpenRouter API Key (if using DeepSeek)", type="password")
+    google_api_key = st.text_input("Google API Key", type="password")
+    if google_api_key:
+        os.environ["GOOGLE_API_KEY"] = google_api_key
+        
+    openrouter_api_key = st.text_input("OpenRouter API Key (for DeepSeek)", type="password")
     if openrouter_api_key:
         os.environ["OPENROUTER_API_KEY"] = openrouter_api_key
 

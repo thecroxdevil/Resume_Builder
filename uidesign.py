@@ -7,6 +7,67 @@ from openai import OpenAI
 # Configuration and setup
 st.set_page_config(page_title="AI Resume Customizer", layout="wide")
 
+# Add this near the top of your file after st.set_page_config
+# Custom CSS to make the sidebar hideable
+st.markdown("""
+<style>
+    /* Hide the default sidebar toggle */
+    .css-1rs6os.edgvbvh3 {
+        visibility: hidden;
+    }
+    
+    /* Create a custom sidebar toggle button */
+    .sidebar-toggle {
+        position: fixed;
+        top: 60px;
+        left: 0;
+        z-index: 99;
+        padding: 4px 10px;
+        background: #4e8cff;
+        color: white;
+        border-radius: 0 4px 4px 0;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+    
+    /* JavaScript to toggle sidebar visibility */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+</style>
+
+<script>
+    // Add toggle button to the page
+    document.addEventListener('DOMContentLoaded', function() {
+        const sidebarToggle = document.createElement('div');
+        sidebarToggle.className = 'sidebar-toggle';
+        sidebarToggle.innerHTML = '◀';
+        sidebarToggle.title = 'Toggle Sidebar';
+        document.body.appendChild(sidebarToggle);
+        
+        let sidebarHidden = false;
+        const sidebar = document.querySelector('.css-1d391kg, .css-1lcbmhc');
+        
+        sidebarToggle.addEventListener('click', function() {
+            if (sidebarHidden) {
+                sidebar.style.margin = '0px';
+                sidebar.style.width = '260px';
+                sidebar.style.opacity = '1';
+                sidebarToggle.innerHTML = '◀';
+                sidebarHidden = false;
+            } else {
+                sidebar.style.margin = '0 0 0 -260px';
+                sidebar.style.width = '0px';
+                sidebar.style.opacity = '0';
+                sidebarToggle.innerHTML = '▶';
+                sidebarHidden = true;
+            }
+        });
+    });
+</script>
+""", unsafe_allow_html=True)
+
+
 # Custom CSS to make it look more like your HTML design
 st.markdown("""
 <style>

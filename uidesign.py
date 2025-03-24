@@ -66,31 +66,50 @@ def load_prompts():
     except FileNotFoundError:
         pass
 
-# Initialize Gemini API
+# Initialize Gemini API (using Hugging Face secrets)
 @st.cache_resource
 def initialize_gemini_api():
     try:
-        genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
+        # Access Google API key from Hugging Face secrets
+        google_api_key = os.environ.get("GOOGLE_API_KEY")
+        if not google_api_key:
+            st.warning("Google API Key not found in secrets. Please add it to Hugging Face Secrets.")
+            return False
+        
+        genai.configure(api_key=google_api_key)
+        return True
     except Exception as e:
         st.error(f"Error initializing Gemini API: {e}")
+        return False
 
-# Initialize OpenRouter Client for DeepSeek
+# Initialize OpenRouter Client for DeepSeek (using Hugging Face secrets)
 @st.cache_resource
 def initialize_openrouter_client():
     try:
+        # Access OpenRouter API key from Hugging Face secrets
+        openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
+        if not openrouter_api_key:
+            st.warning("OpenRouter API Key not found in secrets. Please add it to Hugging Face Secrets.")
+            return None
+        
         return OpenAI(
             base_url="https://openrouter.ai/api/v1",
-            api_key=os.environ.get("OPENROUTER_API_KEY")
+            api_key=openrouter_api_key
         )
     except Exception as e:
         st.error(f"Error initializing OpenRouter client: {e}")
         return None
 
-initialize_gemini_api()
+# Initialize the Gemini API on app startup
+gemini_initialized = initialize_gemini_api()
 
 # Function to customize resume with Gemini
 def customize_resume(resume_template, job_description, prompt):
     try:
+        if not gemini_initialized:
+            st.error("Gemini API not properly initialized. Check API key in Hugging Face Secrets.")
+            return None
+            
         model = genai.GenerativeModel('gemini-2.0-flash')
         response = model.generate_content(
             f"{prompt}\n\nJob Description:\n{job_description}\n\nResume Template:\n{resume_template}"
@@ -103,6 +122,10 @@ def customize_resume(resume_template, job_description, prompt):
 # Function to generate cover letter with Gemini
 def generate_cover_letter(resume, job_description, prompt, template):
     try:
+        if not gemini_initialized:
+            st.error("Gemini API not properly initialized. Check API key in Hugging Face Secrets.")
+            return None
+            
         model = genai.GenerativeModel('gemini-2.0-flash')
         response = model.generate_content(
             f"{prompt}\n\nJob Description:\n{job_description}\n\nResume:\n{resume}\n\nCover Letter Template:\n{template}"
@@ -117,6 +140,7 @@ def customize_resume_deepseek(resume_template, job_description, prompt):
     try:
         client = initialize_openrouter_client()
         if not client:
+            st.error("OpenRouter client not properly initialized. Check API key in Hugging Face Secrets.")
             return None
         
         completion = client.chat.completions.create(
@@ -142,6 +166,7 @@ def generate_cover_letter_deepseek(resume, job_description, prompt, template):
     try:
         client = initialize_openrouter_client()
         if not client:
+            st.error("OpenRouter client not properly initialized. Check API key in Hugging Face Secrets.")
             return None
             
         completion = client.chat.completions.create(
@@ -237,15 +262,18 @@ with st.sidebar:
         ["Google Gemini", "DeepSeek (via OpenRouter)"]
     )
     
-    # API key input (for local development)
-    st.subheader("API Settings")
-    google_api_key = st.text_input("Google API Key", type="password")
-    if google_api_key:
-        os.environ["GOOGLE_API_KEY"] = google_api_key
+    # API status indicators
+    st.subheader("API Status")
+    
+    if os.environ.get("GOOGLE_API_KEY"):
+        st.success("Google API Key: Found in Hugging Face Secrets")
+    else:
+        st.error("Google API Key: Not found in Hugging Face Secrets")
         
-    openrouter_api_key = st.text_input("OpenRouter API Key (for DeepSeek)", type="password")
-    if openrouter_api_key:
-        os.environ["OPENROUTER_API_KEY"] = openrouter_api_key
+    if os.environ.get("OPENROUTER_API_KEY"):
+        st.success("OpenRouter API Key: Found in Hugging Face Secrets")
+    else:
+        st.error("OpenRouter API Key: Not found in Hugging Face Secrets")
 
 # Main area
 st.header("Job Description Input")
@@ -276,74 +304,4 @@ if st.button("Generate Customized Documents") and job_description:
                     )
                 else:  # DeepSeek
                     cover_letter = generate_cover_letter_deepseek(
-                        customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
-            
-            if cover_letter:
-                st.session_state.cover_letter = cover_letter
-                st.success("Documents generated successfully!")
-            else:
-                st.error("Failed to generate cover letter.")
-        else:
-            st.error("Failed to customize resume.")
-
-# Display results in tabs
-if 'customized_resume' in st.session_state and 'cover_letter' in st.session_state:
-    tab1, tab2 = st.tabs(["Customized Resume", "Cover Letter"])
-    
-    with tab1:
-        st.subheader("Customized Resume (LaTeX)")
-        st.code(st.session_state.customized_resume, language="latex")
-        
-        if st.button("Regenerate Resume"):
-            with st.spinner("Customizing resume..."):
-                if ai_model == "Google Gemini":
-                    customized_resume = customize_resume(resume_template, job_description, st.session_state.resume_prompt)
-                else:  # DeepSeek
-                    customized_resume = customize_resume_deepseek(resume_template, job_description, st.session_state.resume_prompt)
-            if customized_resume:
-                st.session_state.customized_resume = customized_resume
-                st.rerun()
-        
-        # Download button for resume
-        resume_download = st.download_button(
-            label="Download Resume LaTeX",
-            data=st.session_state.customized_resume,
-            file_name="customized_resume.tex",
-            mime="text/plain"
-        )
-    
-    with tab2:
-        st.subheader("Cover Letter (LaTeX)")
-        st.code(st.session_state.cover_letter, language="latex")
-        
-        if st.button("Regenerate Cover Letter"):
-            with st.spinner("Generating cover letter..."):
-                if ai_model == "Google Gemini":
-                    cover_letter = generate_cover_letter(
-                        st.session_state.customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
-                else:  # DeepSeek
-                    cover_letter = generate_cover_letter_deepseek(
-                        st.session_state.customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
-            if cover_letter:
-                st.session_state.cover_letter = cover_letter
-                st.rerun()
-        
-        # Download button for cover letter
-        cl_download = st.download_button(
-            label="Download Cover Letter LaTeX",
-            data=st.session_state.cover_letter,
-            file_name="cover_letter.tex",
-            mime="text/plain"
-        )
+                        customized_resu

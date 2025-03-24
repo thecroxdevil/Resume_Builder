@@ -7,6 +7,77 @@ from openai import OpenAI
 # Configuration and setup
 st.set_page_config(page_title="AI Resume Customizer", layout="wide")
 
+# Custom CSS to make it look more like your HTML design
+st.markdown("""
+<style>
+    /* Chat container styling */
+    .main .block-container {
+        max-width: 800px !important;
+        padding-top: 2rem;
+        padding-bottom: 0;
+    }
+    
+    /* Chat message styling */
+    .chat-message {
+        padding: 1rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+    }
+    .user-message {
+        background-color: #e6f2ff;
+        border-left: 4px solid #2196F3;
+    }
+    .ai-message {
+        background-color: #f0f0f0;
+        border-left: 4px solid #4CAF50;
+    }
+    
+    /* Message header styling */
+    .message-header {
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+    }
+    
+    /* Chat input styling */
+    .stTextInput>div>div>input {
+        border: none !important;
+        padding: 12px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Selectbox styling */
+    .stSelectbox>div>div {
+        background-color: #f9f9f9 !important;
+    }
+    
+    /* Buttons styling */
+    .stButton>button {
+        border-radius: 20px;
+        padding: 5px 15px;
+    }
+    
+    /* Dataframe without index */
+    .dataframe-container [data-testid="stDataFrame"] td:first-child {
+        display: none;
+    }
+    .dataframe-container [data-testid="stDataFrame"] th:first-child {
+        display: none;
+    }
+    
+    /* Hide hamburger menu and footer */
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    
+    /* Template and settings panel */
+    .css-1544g2n {
+        padding: 1rem;
+        margin-top: 0;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Initialize session state variables if they don't exist
 if 'resume_prompt' not in st.session_state:
     st.session_state.resume_prompt = """
@@ -30,6 +101,12 @@ if 'cover_letter_prompt' not in st.session_state:
     4. Be persuasive, confident, and professional
     5. Return ONLY the modified LaTeX code
     """
+
+if "chat_messages" not in st.session_state:
+    st.session_state.chat_messages = []
+
+if "current_mode" not in st.session_state:
+    st.session_state.current_mode = "job_description"
 
 # Function to load templates from disk
 def load_template(template_type):
@@ -66,41 +143,29 @@ def load_prompts():
     except FileNotFoundError:
         pass
 
-# Initialize Gemini API (using Hugging Face secrets)
+# Initialize Gemini API
 @st.cache_resource
 def initialize_gemini_api():
     try:
-        # Access Google API key from Hugging Face secrets
-        google_api_key = os.environ.get("GOOGLE_API_KEY")
-        if not google_api_key:
-            st.warning("Google API Key not found in secrets. Please add it to Hugging Face Secrets.")
-            return False
-        
-        genai.configure(api_key=google_api_key)
+        genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
         return True
     except Exception as e:
         st.error(f"Error initializing Gemini API: {e}")
         return False
 
-# Initialize OpenRouter Client for DeepSeek (using Hugging Face secrets)
+# Initialize OpenRouter Client
 @st.cache_resource
 def initialize_openrouter_client():
     try:
-        # Access OpenRouter API key from Hugging Face secrets
-        openrouter_api_key = os.environ.get("OPENROUTER_API_KEY")
-        if not openrouter_api_key:
-            st.warning("OpenRouter API Key not found in secrets. Please add it to Hugging Face Secrets.")
-            return None
-        
         return OpenAI(
             base_url="https://openrouter.ai/api/v1",
-            api_key=openrouter_api_key
+            api_key=os.environ.get("OPENROUTER_API_KEY")
         )
     except Exception as e:
         st.error(f"Error initializing OpenRouter client: {e}")
         return None
 
-# Initialize the Gemini API on app startup
+# Initialize APIs on app startup
 gemini_initialized = initialize_gemini_api()
 
 # Function to customize resume with Gemini
@@ -145,7 +210,7 @@ def customize_resume_deepseek(resume_template, job_description, prompt):
         
         completion = client.chat.completions.create(
             extra_headers={
-                "HTTP-Referer": "https://yourappdomain.com",  # Update with your actual domain
+                "HTTP-Referer": "https://yourappdomain.com",
                 "X-Title": "AI Resume Customizer",
             },
             model="deepseek/deepseek-r1:free",
@@ -171,7 +236,7 @@ def generate_cover_letter_deepseek(resume, job_description, prompt, template):
             
         completion = client.chat.completions.create(
             extra_headers={
-                "HTTP-Referer": "https://yourappdomain.com",  # Update with your actual domain
+                "HTTP-Referer": "https://yourappdomain.com",
                 "X-Title": "AI Resume Customizer",
             },
             model="deepseek/deepseek-r1:free",
@@ -190,188 +255,216 @@ def generate_cover_letter_deepseek(resume, job_description, prompt, template):
 # Load saved prompts on app startup
 load_prompts()
 
-# UI Header
+# Function to add chat message
+def add_chat_message(sender, content, message_type="text"):
+    st.session_state.chat_messages.append({
+        "sender": sender,
+        "content": content,
+        "type": message_type
+    })
+
+# Main Application UI
 st.title("AI Resume & Cover Letter Customizer")
 
-# Sidebar for templates and prompt settings
-with st.sidebar:
-    st.header("Templates & Settings")
-    
-    # Template management
-    st.subheader("Resume Template")
-    
-    template_option = st.radio(
-        "Resume Template Option:",
-        ["Use saved template", "Upload new template"]
-    )
-    
-    if template_option == "Upload new template":
-        resume_template_file = st.file_uploader("Upload Resume LaTeX Template", type=["tex"])
-        if resume_template_file is not None:
-            resume_template = resume_template_file.getvalue().decode("utf-8")
-            save_template("resume", resume_template)
-            st.success("Resume template saved!")
+# Create two columns - one for chat and one for settings
+col1, col2 = st.columns([3, 1])
+
+with col2:
+    with st.expander("Settings & Templates", expanded=True):
+        # Template management
+        st.subheader("Resume Template")
+        
+        template_option = st.radio(
+            "Resume Template Option:",
+            ["Use saved template", "Upload new template"]
+        )
+        
+        if template_option == "Upload new template":
+            resume_template_file = st.file_uploader("Upload Resume LaTeX Template", type=["tex"])
+            if resume_template_file is not None:
+                resume_template = resume_template_file.getvalue().decode("utf-8")
+                save_template("resume", resume_template)
+                st.success("Resume template saved!")
+            else:
+                resume_template = load_template("resume")
         else:
             resume_template = load_template("resume")
-    else:
-        resume_template = load_template("resume")
-        if not resume_template:
-            st.warning("No saved resume template found. Please upload one.")
-    
-    st.subheader("Cover Letter Template")
-    
-    cl_template_option = st.radio(
-        "Cover Letter Template Option:",
-        ["Use saved template", "Upload new template"]
-    )
-    
-    if cl_template_option == "Upload new template":
-        cl_template_file = st.file_uploader("Upload Cover Letter LaTeX Template", type=["tex"])
-        if cl_template_file is not None:
-            cl_template = cl_template_file.getvalue().decode("utf-8")
-            save_template("cover_letter", cl_template)
-            st.success("Cover letter template saved!")
+            if not resume_template:
+                st.warning("No saved resume template found. Please upload one.")
+        
+        st.subheader("Cover Letter Template")
+        
+        cl_template_option = st.radio(
+            "Cover Letter Template Option:",
+            ["Use saved template", "Upload new template"]
+        )
+        
+        if cl_template_option == "Upload new template":
+            cl_template_file = st.file_uploader("Upload Cover Letter LaTeX Template", type=["tex"])
+            if cl_template_file is not None:
+                cl_template = cl_template_file.getvalue().decode("utf-8")
+                save_template("cover_letter", cl_template)
+                st.success("Cover letter template saved!")
+            else:
+                cl_template = load_template("cover_letter")
         else:
             cl_template = load_template("cover_letter")
-    else:
-        cl_template = load_template("cover_letter")
-        if not cl_template:
-            st.warning("No saved cover letter template found. Please upload one.")
-    
-    # Prompt management
-    st.subheader("AI Prompts")
-    
-    st.text_area("Resume Customization Prompt", value=st.session_state.resume_prompt, 
-                height=200, key="resume_prompt_input", 
-                on_change=lambda: setattr(st.session_state, "resume_prompt", st.session_state.resume_prompt_input))
-    
-    st.text_area("Cover Letter Generation Prompt", value=st.session_state.cover_letter_prompt, 
-                height=200, key="cl_prompt_input", 
-                on_change=lambda: setattr(st.session_state, "cover_letter_prompt", st.session_state.cl_prompt_input))
-    
-    if st.button("Save Prompts"):
-        st.session_state.resume_prompt = st.session_state.resume_prompt_input
-        st.session_state.cover_letter_prompt = st.session_state.cl_prompt_input
-        save_prompts()
-        st.success("Prompts saved!")
+            if not cl_template:
+                st.warning("No saved cover letter template found. Please upload one.")
         
-    # AI Model Selection
-    st.subheader("AI Model Selection")
-    ai_model = st.selectbox(
-        "Select AI Model:",
-        ["Google Gemini", "DeepSeek (via OpenRouter)"]
-    )
-    
-    # API status indicators
-    st.subheader("API Status")
-    
-    if os.environ.get("GOOGLE_API_KEY"):
-        st.success("Google API Key: Found in Hugging Face Secrets")
-    else:
-        st.error("Google API Key: Not found in Hugging Face Secrets")
-        
-    if os.environ.get("OPENROUTER_API_KEY"):
-        st.success("OpenRouter API Key: Found in Hugging Face Secrets")
-    else:
-        st.error("OpenRouter API Key: Not found in Hugging Face Secrets")
-
-# Main area
-st.header("Job Description Input")
-job_description = st.text_area("Paste the job description here:", height=300)
-
-if st.button("Generate Customized Documents") and job_description:
-    if not resume_template:
-        st.error("Please upload or select a resume template first.")
-    elif not cl_template:
-        st.error("Please upload or select a cover letter template first.")
-    else:
-        with st.spinner("Customizing resume..."):
-            if ai_model == "Google Gemini":
-                customized_resume = customize_resume(resume_template, job_description, st.session_state.resume_prompt)
-            else:  # DeepSeek
-                customized_resume = customize_resume_deepseek(resume_template, job_description, st.session_state.resume_prompt)
-        
-        if customized_resume:
-            st.session_state.customized_resume = customized_resume
+        # Prompt management
+        with st.expander("AI Prompts"):
+            st.text_area("Resume Customization Prompt", value=st.session_state.resume_prompt, 
+                        height=150, key="resume_prompt_input", 
+                        on_change=lambda: setattr(st.session_state, "resume_prompt", st.session_state.resume_prompt_input))
             
-            with st.spinner("Generating cover letter..."):
-                if ai_model == "Google Gemini":
-                    cover_letter = generate_cover_letter(
-                        customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
-                else:  # DeepSeek
-                    cover_letter = generate_cover_letter_deepseek(
-                        customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
+            st.text_area("Cover Letter Generation Prompt", value=st.session_state.cover_letter_prompt, 
+                        height=150, key="cl_prompt_input", 
+                        on_change=lambda: setattr(st.session_state, "cover_letter_prompt", st.session_state.cl_prompt_input))
             
-            if cover_letter:
-                st.session_state.cover_letter = cover_letter
-                st.success("Documents generated successfully!")
-            else:
-                st.error("Failed to generate cover letter.")
+            if st.button("Save Prompts"):
+                st.session_state.resume_prompt = st.session_state.resume_prompt_input
+                st.session_state.cover_letter_prompt = st.session_state.cl_prompt_input
+                save_prompts()
+                st.success("Prompts saved!")
+        
+        # API status indicators
+        st.subheader("API Status")
+        
+        if os.environ.get("GOOGLE_API_KEY"):
+            st.success("Google API Key: ✓")
         else:
-            st.error("Failed to customize resume.")
+            st.error("Google API Key: ✗")
+            
+        if os.environ.get("OPENROUTER_API_KEY"):
+            st.success("OpenRouter API Key: ✓")
+        else:
+            st.error("OpenRouter API Key: ✗")
 
-# Display results in tabs
-if 'customized_resume' in st.session_state and 'cover_letter' in st.session_state:
-    tab1, tab2 = st.tabs(["Customized Resume", "Cover Letter"])
+with col1:
+    # Chat interface
+    chat_container = st.container()
     
-    with tab1:
-        st.subheader("Customized Resume (LaTeX)")
-        st.code(st.session_state.customized_resume, language="latex")
-        
-        if st.button("Regenerate Resume"):
-            with st.spinner("Customizing resume..."):
-                if ai_model == "Google Gemini":
-                    customized_resume = customize_resume(resume_template, job_description, st.session_state.resume_prompt)
-                else:  # DeepSeek
-                    customized_resume = customize_resume_deepseek(resume_template, job_description, st.session_state.resume_prompt)
-            if customized_resume:
-                st.session_state.customized_resume = customized_resume
-                st.rerun()
-        
-        # Download button for resume
-        resume_download = st.download_button(
-            label="Download Resume LaTeX",
-            data=st.session_state.customized_resume,
-            file_name="customized_resume.tex",
-            mime="text/plain"
-        )
+    with chat_container:
+        # Display chat messages
+        for message in st.session_state.chat_messages:
+            if message["sender"] == "user":
+                st.markdown(f"""
+                <div class="chat-message user-message">
+                    <div class="message-header">You:</div>
+                    <div>{message["content"]}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                st.markdown(f"""
+                <div class="chat-message ai-message">
+                    <div class="message-header">{message["sender"]}:</div>
+                    <div>{message["content"] if message["type"] == "text" else "Generated Document (See Downloads)"}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # Add download buttons for generated documents
+                if message["type"] == "resume":
+                    st.download_button(
+                        "Download Resume",
+                        message["content"],
+                        file_name="customized_resume.tex",
+                        mime="text/plain"
+                    )
+                elif message["type"] == "cover_letter":
+                    st.download_button(
+                        "Download Cover Letter",
+                        message["content"],
+                        file_name="cover_letter.tex",
+                        mime="text/plain"
+                    )
+
+    # Input area
+    st.markdown("<hr>", unsafe_allow_html=True)
     
-    with tab2:
-        st.subheader("Cover Letter (LaTeX)")
-        st.code(st.session_state.cover_letter, language="latex")
+    if st.session_state.current_mode == "job_description":
+        st.markdown("### Step 1: Enter the job description")
+        job_description = st.text_area("", height=150, placeholder="Paste the job description here...", label_visibility="collapsed")
         
-        if st.button("Regenerate Cover Letter"):
-            with st.spinner("Generating cover letter..."):
-                if ai_model == "Google Gemini":
-                    cover_letter = generate_cover_letter(
-                        st.session_state.customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
-                else:  # DeepSeek
-                    cover_letter = generate_cover_letter_deepseek(
-                        st.session_state.customized_resume, 
-                        job_description, 
-                        st.session_state.cover_letter_prompt,
-                        cl_template
-                    )
-            if cover_letter:
-                st.session_state.cover_letter = cover_letter
+        if st.button("Continue"):
+            if job_description:
+                add_chat_message("user", job_description)
+                st.session_state.job_description = job_description
+                st.session_state.current_mode = "generate_documents"
                 st.rerun()
+            else:
+                st.error("Please enter a job description.")
+                
+    elif st.session_state.current_mode == "generate_documents":
+        # Model selection and generation
+        col_model, col_generate = st.columns([1, 3])
         
-        # Download button for cover letter
-        cl_download = st.download_button(
-            label="Download Cover Letter LaTeX",
-            data=st.session_state.cover_letter,
-            file_name="cover_letter.tex",
-            mime="text/plain"
-        )
+        with col_model:
+            ai_model = st.selectbox(
+                "",
+                ["Google Gemini", "DeepSeek"],
+                label_visibility="collapsed"
+            )
+            
+        with col_generate:
+            if st.button("Generate Resume & Cover Letter"):
+                if not resume_template:
+                    st.error("Please upload a resume template first.")
+                elif not cl_template:
+                    st.error("Please upload a cover letter template first.")
+                else:
+                    with st.spinner("Working on your documents..."):
+                        # Generate customized resume
+                        if ai_model == "Google Gemini":
+                            customized_resume = customize_resume(
+                                resume_template, 
+                                st.session_state.job_description, 
+                                st.session_state.resume_prompt
+                            )
+                        else:  # DeepSeek
+                            customized_resume = customize_resume_deepseek(
+                                resume_template, 
+                                st.session_state.job_description, 
+                                st.session_state.resume_prompt
+                            )
+                        
+                        if customized_resume:
+                            # Save resume to session state and add to chat
+                            st.session_state.customized_resume = customized_resume
+                            add_chat_message(ai_model, customized_resume, "resume")
+                            
+                            # Generate cover letter
+                            if ai_model == "Google Gemini":
+                                cover_letter = generate_cover_letter(
+                                    customized_resume, 
+                                    st.session_state.job_description, 
+                                    st.session_state.cover_letter_prompt,
+                                    cl_template
+                                )
+                            else:  # DeepSeek
+                                cover_letter = generate_cover_letter_deepseek(
+                                    customized_resume, 
+                                    st.session_state.job_description, 
+                                    st.session_state.cover_letter_prompt,
+                                    cl_template
+                                )
+                            
+                            if cover_letter:
+                                # Save cover letter to session state and add to chat
+                                st.session_state.cover_letter = cover_letter
+                                add_chat_message(ai_model, cover_letter, "cover_letter")
+                                
+                                # Add success message
+                                add_chat_message(ai_model, "Your resume and cover letter have been generated successfully! You can download them using the buttons above.", "text")
+                                
+                                # Reset to allow new job descriptions
+                                st.session_state.current_mode = "job_description"
+                                st.rerun()
+                            else:
+                                st.error("Failed to generate cover letter.")
+                        else:
+                            st.error("Failed to customize resume.")
+            
+            if st.button("Start Over"):
+                st.session_state.current_mode = "job_description"
+                st.rerun()
